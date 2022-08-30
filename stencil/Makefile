@@ -2,7 +2,7 @@
 # Makefile that builds btest and other helper programs for the Data project
 # 
 CC = gcc
-CFLAGS = -O -Wall -Wno-bool-compare -m32
+CFLAGS = -O -Wall -Wno-bool-compare -m32 -g
 LIBS = -lm
 
 .PHONY: all clean

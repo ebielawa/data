@@ -113,7 +113,10 @@ EXAMPLES OF ACCEPTABLE CODING STYLE:
  *   Max ops: 8
  *   Rating: 1
  */
-int bit_and(int x, int y) { return 2; }
+int bit_and(int x, int y) {
+	// DeMorgan's Law moment
+	return ~(~x | ~y);
+}
 
 
 /*
@@ -125,7 +128,10 @@ int bit_and(int x, int y) { return 2; }
  *   Max ops: 5
  *   Rating: 2
  */
-int negate(int x) { return 2; }
+int negate(int x) {
+	// Slides moment
+	return ~x + 1;
+}
 
 
 /*
@@ -136,7 +142,11 @@ int negate(int x) { return 2; }
  *   Max ops: 5
  *   Rating: 2
  */
-int is_equal(int x, int y) { return 2; }
+int is_equal(int x, int y) {
+	// x ^ y returns all 0's if x == y, and some nonzero number otherwise
+	// We can convert that to 1 using bang
+	return !(x ^ y);
+}
 
 
 /*
@@ -148,7 +158,19 @@ int is_equal(int x, int y) { return 2; }
  *   Max ops: 15
  *   Rating: 2
  */
-int div_pwr_2(int x, int n) { return 2; }
+int div_pwr_2(int x, int n) {
+	// First we extract the sign
+	// Leads 0 if positive, 1 if negative
+	int sign = x & (1 << 31);
+
+	int neg_one = ~1 + 1;
+	int pos_div = x >> n;
+	int neg_div =  (x + (1 << n) + neg_one) >> n;
+
+	int mask = sign >> 31;
+	return (pos_div & ~mask) + (neg_div & mask);
+
+}
 
 
 /*
@@ -159,7 +181,16 @@ int div_pwr_2(int x, int n) { return 2; }
  *   Max ops: 6
  *   Rating: 4
  */
-int leastBitPos(int x) { return 2; }
+int leastBitPos(int x) {
+	// When you negate a number, you flip all the bits
+	// 0010
+	// 1101
+	// If you add 1 to the negation, you end up with the actual negation
+	// 1110
+	// You can actually & this with the original number to get the last bit (it's the 1 bit where the carrying stops)
+
+	return x & (~x + 1);
+}
 
 
 /*
@@ -170,7 +201,14 @@ int leastBitPos(int x) { return 2; }
  *   Max ops: 16
  *   Rating: 3
  */
-int conditional(int x, int y, int z) { return 2; }
+int conditional(int x, int y, int z) {
+	// Mask converts x to either -1 or 0
+	int mask = ~(!x) + 1;
+	// then we can mask appropriately depending on case
+	return (~mask & y) + (mask & z);
+
+	// TODO: Add test case for overflow between adding y and -z
+}
 
 
 /*
@@ -181,7 +219,16 @@ int conditional(int x, int y, int z) { return 2; }
  *   Max ops: 20
  *   Rating: 3
  */
-int add_ok(int x, int y) { return 2; }
+int add_ok(int x, int y) {
+	// Leads with 1 if signs are same, 0 otherwise
+	int same_sign = ~(x ^ y);
+
+	int result = x + y;
+	// Leads with 0 if the signs are same, 1 otherwise
+	int result_sign = (x ^ result);
+
+	return !((same_sign & result_sign) >> 31);
+}
 
 
 /*
@@ -193,7 +240,12 @@ int add_ok(int x, int y) { return 2; }
  *   Max ops: 6
  *   Rating: 5
  */
-int abs_val(int x) { return 2; }
+int abs_val(int x) {
+	int sign = x >> 31;
+	int neg = ~x + 1;
+	int signed_neg = sign & neg;
+	return x + signed_neg + signed_neg;
+}
 
 
 /*
@@ -203,4 +255,12 @@ int abs_val(int x) { return 2; }
  *   Max ops: 12
  *   Rating: 5
  */
-int bang(int x) { return 2; }
+int bang(int x) {
+	// Leverages the property that 0 is the only number whose negation and itself has leading bit 0
+	// This means 0 or'd with -0 will have leading bit 0... that's important because we can shift it!
+
+	return ((x | (~x + 1)) >> 31) + 1;
+
+}
+
+// NOTE: Issues with compilation -- make sure GCC is installed for multi-library (must support 32 bit architechure)
